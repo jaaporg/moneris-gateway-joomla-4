@@ -11,11 +11,6 @@
 	<version>1.0.0</version>
 	<description>PLG_EASYSTORE_MONERIS_XML_DESCRIPTION</description>
 	<namespace path="src">JoomShaper\Plugin\EasyStore\Moneris</namespace>
-	<!-- Add media folder if you need to add any js file -->
-	<media folder="media">
-		<folder>plg_easystore_moneris/js</folder>
-		<filename>plg_easystore_moneris/joomla.asset.json</filename>
-	</media>
 	<files>
 		<folder plugin="moneris">services</folder>
 		<folder>assets</folder>
