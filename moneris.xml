@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The plugin group should be designated as `easystore` . -->
+<extension type="plugin" group="easystore" method="upgrade">
+	<name>PLG_EASYSTORE_MONERIS</name>
+	<author>JoomShaper</author>
+	<creationDate>2024-01</creationDate>
+	<copyright>(C) 2024 JoomShaper.</copyright>
+	<license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+	<authorEmail>support@joomshaper.com</authorEmail>
+	<authorUrl>www.joomshaper.com</authorUrl>
+	<version>1.0.0</version>
+	<description>PLG_EASYSTORE_MONERIS_XML_DESCRIPTION</description>
+	<namespace path="src">JoomShaper\Plugin\EasyStore\Moneris</namespace>
+	<!-- Add media folder if you need to add any js file -->
+	<media folder="media">
+		<folder>plg_easystore_moneris/js</folder>
+		<filename>plg_easystore_moneris/joomla.asset.json</filename>
+	</media>
+	<files>
+		<folder plugin="moneris">services</folder>
+		<folder>assets</folder>
+		<folder>src</folder>
+	</files>
+	<languages folder="admin">
+		<language tag="en-GB">plg_easystore_moneris.sys.ini</language>
+	</languages>
+	<config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field
+					name="title"
+					type="text"
+					label="PLG_EASYSTORE_MONERIS_TITLE"
+					default="Moneris"
+    			/>
+				<!-- If your payment system offers live and test modes -->
+				<field 
+                    name="payment_environment" 
+					type="radio" 
+					class="btn-group btn-group-yesno"
+                    label="PLG_EASYSTORE_MONERIS_PAYMENT_ENVIRONMENT" 
+                    description="PLG_EASYSTORE_MONERIS_PAYMENT_ENVIRONMENT_DESC" 
+                    default="test" 
+                >
+					<option value="live">PLG_EASYSTORE_MONERIS_PAYMENT_ENVIRONMENT_LIVE</option>
+					<option value="test">PLG_EASYSTORE_MONERIS_PAYMENT_ENVIRONMENT_TEST</option>
+				</field>
+				<field
+					name="test_store_id"
+					type="text"
+					label="PLG_EASYSTORE_MONERIS_TEST_STORE_ID"
+					description="PLG_EASYSTORE_MONERIS_TEST_STORE_ID_DESCRIPTION"
+					showon="payment_environment:test"
+    			/>
+				<field
+					name="live_store_id"
+					type="text"
+					label="PLG_EASYSTORE_MONERIS_LIVE_STORE_ID"
+					description="PLG_EASYSTORE_MONERIS_LIVE_STORE_ID_DESCRIPTION"
+					showon="payment_environment:live"
+    			/>
+				<field
+					name="test_api_token"
+					type="text"
+					label="PLG_EASYSTORE_MONERIS_API_TOKEN"
+					description="PLG_EASYSTORE_MONERIS_API_TOKEN_DESCRIPTION"
+					showon="payment_environment:test"
+    			/>
+				<field
+					name="live_api_token"
+					type="text"
+					label="PLG_EASYSTORE_MONERIS_LIVE_API_TOKEN"
+					description="PLG_EASYSTORE_MONERIS_LIVE_API_TOKEN_DESCRIPTION"
+					showon="payment_environment:live"
+    			/>
+				<field
+					name="checkout_id"
+					type="text"
+					label="PLG_EASYSTORE_MONERIS_CHECKOUT_ID"
+					description="PLG_EASYSTORE_MONERIS_CHECKOUT_ID_DESCRIPTION"
+    			/>
+				<field
+					name="payment_instruction"
+					type="textarea"
+					label="PLG_EASYSTORE_MONERIS_PAYMENT_INSTRUCTION"
+					default="You will be redirected to the secure MONERIS payment portal to complete your purchase. After the payment is processed, you will be redirected back to this website"
+    			/>
+			</fieldset>
+		</fields>
+	</config>
+</extension>
