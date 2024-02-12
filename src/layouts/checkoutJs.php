@@ -24,6 +24,8 @@ $environment    = $monerisConstants->getEnvironment();
 $inlineJS = <<<JS
     document.addEventListener('DOMContentLoaded' , () => {
 
+        alert("s");
+
         document.body.innerHTML += '<div id="monerisCheckout"></div>';
 
         var myCheckout = new monerisCheckout();
@@ -69,7 +71,7 @@ $inlineJS = <<<JS
         myCheckout.setCallback("payment_receipt", myPaymentReceipt);
         myCheckout.setCallback("payment_complete", myPaymentComplete);
 
-        myCheckout.startCheckout($ticket);
+        // myCheckout.startCheckout($ticket);
     })
 JS;
 

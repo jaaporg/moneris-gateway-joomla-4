@@ -57,7 +57,6 @@ class MonerisPayment extends PaymentGatewayPlugin
         $data["cust_id"] = "chkt - cust - 0303";
         $data["dynamic_descriptor"] = "dyndesc";
         $data["language"] = "en";
-        
 
         $txnTotal = 0;
         $items = [];
@@ -117,15 +116,17 @@ class MonerisPayment extends PaymentGatewayPlugin
             $ticket = "";
             // If response is true then return the url
             if ($responseData['response']['success'] == "true") {
+
                 $ticket = $responseData['response']['ticket'];
+
                 $layoutPath  = JPATH_ROOT . '/plugins/easystore/moneris/src/layouts';
 
                 echo LayoutHelper::render('checkoutJs', ['ticket' => $ticket], $layoutPath);
 
-                // $event->setArgument('redirectionUrl', "https://gatewayt.moneris.com/chktv2/display/index.php?tck={$ticket}");
+                $event->setArgument('redirectionUrl', "https://gatewayt.moneris.com/chktv2/display/index.php?tck={$ticket}");
+            } else {
+                Factory::getApplication()->enqueueMessage($responseData['response']['error'], 'error');
             }
-
-            Factory::getApplication()->enqueueMessage($responseData['response']['error'], 'error');
         } catch (\Throwable $error) {
             Factory::getApplication()->enqueueMessage($error->getMessage(), 'error');
         }

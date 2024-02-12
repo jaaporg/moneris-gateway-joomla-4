@@ -54,7 +54,7 @@ class MonerisConstants
     }
 
     public function getDisplayUrl(){
-        if($this->pluginParams->get('payment_environment') === 'test') {
+        if($this->pluginParams->get('payment_environment') == 'test') {
             return self::TEST_DISPLAY_URL;
         }
 
@@ -62,7 +62,7 @@ class MonerisConstants
     }
 
     public function getPreloadUrl(){
-        if($this->pluginParams->get('payment_environment') === 'test') {
+        if($this->pluginParams->get('payment_environment') == 'test') {
             return self::TEST_PRELOAD_URL;
         }
 
@@ -70,23 +70,23 @@ class MonerisConstants
     }
 
     public function getStoreId() {
-        if($this->pluginParams->get('payment_environment') === 'test') {
-            return $this->pluginParams->test_store_id;
+        if($this->pluginParams->get('payment_environment') == 'test') {
+            return $this->pluginParams->get('test_store_id');
         }
 
-        return $this->pluginParams->live_store_id;
+        return $this->pluginParams->get('live_store_id');
     }
 
     public function getApiToken() {
-        if($this->pluginParams->get('payment_environment') === 'test') {
-            return $this->pluginParams->test_api_token;
+        if($this->pluginParams->get('payment_environment') == 'test') {
+            return $this->pluginParams->get('test_api_token');
         }
 
-        return $this->pluginParams->live_api_token;
+        return $this->pluginParams->get('live_api_token');
     }
 
     public function getCheckoutId() {
-        return $this->pluginParams->checkout_id;
+        return $this->pluginParams->get('checkout_id');
     }
 
     public function getNotifyUrl() {
@@ -102,7 +102,7 @@ class MonerisConstants
     }
 
     public function getEnvironment() {
-        if($this->pluginParams->get('payment_environment') === 'test') {
+        if($this->pluginParams->get('payment_environment') == 'test') {
             return 'test';
         };
         return '';
