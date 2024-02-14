@@ -2,13 +2,13 @@
 <!-- The plugin group should be designated as `easystore` . -->
 <extension type="plugin" group="easystore" method="upgrade">
 	<name>PLG_EASYSTORE_MONERIS</name>
-	<author>JoomShaper</author>
-	<creationDate>2024-01</creationDate>
-	<copyright>(C) 2024 JoomShaper.</copyright>
+	<author>msahidurr</author>
+	<creationDate>2024-02</creationDate>
+	<copyright>(C) 2024 msahidurr.</copyright>
 	<license>GNU General Public License version 2 or later; see LICENSE.txt</license>
-	<authorEmail>support@joomshaper.com</authorEmail>
-	<authorUrl>www.joomshaper.com</authorUrl>
-	<version>1.0.0</version>
+	<authorEmail>sohidurr49@gmail.com</authorEmail>
+	<authorUrl>www.msahidurr.com</authorUrl>
+	<version>1.0</version>
 	<description>PLG_EASYSTORE_MONERIS_XML_DESCRIPTION</description>
 	<namespace path="src">JoomShaper\Plugin\EasyStore\Moneris</namespace>
 	<files>

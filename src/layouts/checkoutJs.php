@@ -17,49 +17,49 @@ use JoomShaper\Plugin\EasyStore\Moneris\Utils\MonerisConstants;
 // phpcs:enable PSR1.Files.SideEffects
 
 extract($displayData);
-
-$monerisConstants = new MonerisConstants();
-$environment    = $monerisConstants->getEnvironment();
+$constants = new MonerisConstants();
+$url = $constants->getWebHookUrl();
+$environment = $constants->getEnvironment();
 
 $inlineJS = <<<JS
     document.addEventListener('DOMContentLoaded' , () => {
-
-        alert("s");
-
         document.body.innerHTML += '<div id="monerisCheckout"></div>';
-
+        $("#sp-bottom").hide()
         var myCheckout = new monerisCheckout();
-        myCheckout.setMode("qa");
+        myCheckout.setMode("$environment");
         myCheckout.setCheckoutDiv("monerisCheckout");
 
         var myPageLoad = function(data) {
-            console.log(data);
-            const obj = JSON.parse(data);
-            console.log(obj.ticket);
+            console.log("Successfully");
         };
 
         var myCancelTransaction = function(data) {
-            console.log(data);
+            console.log("myCancelTransaction");
             const obj = JSON.parse(data);
             console.log(obj.ticket);
         };
 
         var myErrorEvent = function(data) {
-            console.log(data);
+            console.log("myErrorEvent");
             const obj = JSON.parse(data);
             console.log(obj.ticket);
         };
 
         var myPaymentReceipt = function(data) {
-            console.log(data);
             const obj = JSON.parse(data);
-            console.log(obj.ticket);
+            setTimeout(function() {
+                myCheckout.closeCheckout(obj.ticket);
+                window.location.replace("$url&ticket="+obj.ticket);
+            }, 1000)
         };
 
         var myPaymentComplete = function(data) {
-            console.log(data);
             const obj = JSON.parse(data);
-            console.log(obj.ticket);
+
+            setTimeout(function() {
+                myCheckout.closeCheckout(obj.ticket);
+                window.location.replace("$url&ticket="+obj.ticket);
+            }, 1000)
         };
 
         /**
@@ -71,7 +71,7 @@ $inlineJS = <<<JS
         myCheckout.setCallback("payment_receipt", myPaymentReceipt);
         myCheckout.setCallback("payment_complete", myPaymentComplete);
 
-        // myCheckout.startCheckout($ticket);
+        myCheckout.startCheckout("{$ticket}");
     })
 JS;
 
@@ -79,9 +79,5 @@ $wa = EasyStoreHelper::wa();
 
 // Add script to the document head.
 
-// if ($environment == 'test') {
-    $wa->registerAndUseScript('moneris', MonerisConstants::MONERIS_TEST_JS, [], ['type' => 'text/javascript']);
-// } else {
-//     $wa->registerAndUseScript('moneris', MonerisConstants::MONERIS_LIVE_JS, [], ['type' => 'text/javascript']);
-// }
+$wa->registerAndUseScript('moneris', $constants->getScript(), [], ['type' => 'text/javascript']);
 $wa->addInlineScript($inlineJS);

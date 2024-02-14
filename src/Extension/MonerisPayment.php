@@ -10,7 +10,6 @@
 
 namespace JoomShaper\Plugin\EasyStore\Moneris\Extension;
 
-
 use Joomla\CMS\Log\Log;
 use Joomla\Event\Event;
 use Joomla\CMS\Factory;
@@ -26,92 +25,86 @@ use Joomla\CMS\Layout\LayoutHelper;
 // phpcs:enable PSR1.Files.SideEffects
 
 class MonerisPayment extends PaymentGatewayPlugin
-{    
+{
+    /**
+     * Check if all the required fields for the plugin are filled.
+     *
+     * @return void The result of the check, indicating whether the required fields are filled.
+     * @since 1.0.3
+     */
+    public function onBeforePayment(Event $event)
+    {
+        $constant = new MonerisConstants();
+        $storeId = $constant->getStoreId();
+        $apiToken = $constant->getApiToken();
+        $checkoutId = $constant->getCheckoutId();
+
+        $isRequiredFieldsFilled = !empty($storeId) && !empty($apiToken) && !empty($checkoutId);
+
+        $event->setArgument('result', $isRequiredFieldsFilled);
+    }
+
     /**
      * Initiate an event that will lead to a redirection to the checkout page.
      *
      * @param Event $event -- The event object that contains cart data required for payment processing.
-     * 
+     *
      * @since 1.0.0
      */
     public function onPayment(Event $event)
     {
         // Get the necessary data from `SampleConstants` which are needed to initiate payment process.
         $constants   = new MonerisConstants();
-        $eventArguments = $event->getArguments();  
+        $eventArguments = $event->getArguments();
         $productsList   = $eventArguments['subject'] ? $eventArguments['subject'] : [];
+        $paymentData   = $eventArguments['subject'] ? $eventArguments['subject'] : [];
+
+        $query['notify_url']    = $constants->getWebHookUrl();
+        $query['return']        = $constants->getSuccessUrl();
+        $query['cancel_return'] = $constants->getCancelUrl($productsList->order_id);
 
         $data = [];
         $data["store_id"] = $constants->getStoreId();
         $data["api_token"] = $constants->getApiToken();
         $data["checkout_id"] = $constants->getCheckoutId();
-
-        if($constants->getEnvironment() == "test") {
-            $data["environment"] = "qa";
-        }
-
+        $requestData["environment"] = $constants->getEnvironment();
         $data["action"] = "preload";
         $data["token"] = [];
         $data["ask_cvv"] = "Y";
         $data["order_no"] = "";
-        $data["cust_id"] = "chkt - cust - 0303";
+        $data["cust_id"] = (string) $paymentData->order_id;
         $data["dynamic_descriptor"] = "dyndesc";
         $data["language"] = "en";
 
         $txnTotal = 0;
         $items = [];
-        if (!empty($productsList)) {
-            if(!empty($productsList->items)) {
-                foreach ($productsList->items as $key => $product) {
-                    
+        if (!empty($paymentData)) {
+            if(!empty($paymentData->items)) {
+                foreach ($paymentData->items as $key => $product) {
+
                     $price = $product->discounted_price ? $product->discounted_price : $product->regular_price;
 
-                    $items[$key]["url"]    = "";
-                    $items[$key]["product_code"]    = (string)$product->id;
-                    $items[$key]["description"]    = $product->title;
-                    $items[$key]["quantity"]    = (string)$product->quantity;
-                    $items[$key]["unit_cost"]      = (string)$price;
-                    
+                    $items[$key]["url"] = "";
+                    $items[$key]["quantity"] = (string) $product->quantity;
+                    $items[$key]["unit_cost"] = (string) $price;
+                    $items[$key]["description"] = $product->title;
+                    $items[$key]["product_code"] = (string) $product->id;
+
                     $txnTotal += $price;
                 }
             }
 
-            $txnTotal = (string) $txnTotal + $productsList->tax;
+            $txnTotal = (string) $txnTotal + $paymentData->tax;
         }
 
         $data["cart"] = $items;
-        $data["txn_total"] = number_format($txnTotal, 2, ".", "");
-             
-        // $data["contact_details"] = [
-        //     "first_name" => "bill",
-        //     "last_name" => "smith",
-        //     "email" => "test@moneris.com",
-        //     "phone" => "4165551234"
-        // ];
-
-        // $data["shipping_details"] = [
-        //     "address_1" => "1 main st",
-        //     "address_2" => "Unit 2012",
-        //     "city" => "Toronto",
-        //     "province" => "ON",
-        //     "country" => "CA",
-        //     "postal_code" => "M1M1M1"
-        // ];
-
-        // $data["billing_details"] = [
-        //     "address_1" => "1 main st",
-        //     "address_2" => "Unit 2000",
-        //     "city" => "Toronto",
-        //     "province" => "ON",
-        //     "country" => "CA",
-        //     "postal_code" =>"M1M1M1"
-        // ];
+        $data["txn_total"] = number_format($paymentData->total_price, 2, $paymentData->decimal_separator, '');
 
         try {
-            
+
             $response = HttpFactory::getHttp()->post($constants->getPreloadUrl(), json_encode($data));
 
-            $responseData = json_decode((string)$response->getBody(),true);
+            $responseData = json_decode((string) $response->getBody(), true);
 
             $ticket = "";
             // If response is true then return the url
@@ -122,13 +115,15 @@ class MonerisPayment extends PaymentGatewayPlugin
                 $layoutPath  = JPATH_ROOT . '/plugins/easystore/moneris/src/layouts';
 
                 echo LayoutHelper::render('checkoutJs', ['ticket' => $ticket], $layoutPath);
-
-                $event->setArgument('redirectionUrl', "https://gatewayt.moneris.com/chktv2/display/index.php?tck={$ticket}");
             } else {
-                Factory::getApplication()->enqueueMessage($responseData['response']['error'], 'error');
+                Log::add($responseData['response']['error'], Log::ERROR, 'moneris.easystore');
+                $this->app->enqueueMessage($responseData['response']['error'], 'error');
+                $this->app->redirect($paymentData->back_to_checkout_page);
             }
         } catch (\Throwable $error) {
-            Factory::getApplication()->enqueueMessage($error->getMessage(), 'error');
+            Log::add($error->getMessage(), Log::ERROR, 'moneris.easystore');
+            $this->app->enqueueMessage($error->getMessage(), 'error');
+            $this->app->redirect($paymentData->back_to_checkout_page);
         }
     }
 
@@ -139,9 +134,51 @@ class MonerisPayment extends PaymentGatewayPlugin
      * @since 1.0.0
      */
 
-    public function onPaymentNotify( )
-    { 
-        //
+    public function onPaymentNotify(Event $event)
+    {
+        // Event Arguments
+        $arguments         = $event->getArguments();
+        $paymentNotifyData = $arguments['subject'] ?: new \stdClass();
+
+        $constant        = new MonerisConstants();
+        $input           = $this->app->input;
+        $order           = $paymentNotifyData->order;
+
+        $requestData["store_id"] = $constant->getStoreId();
+        $requestData["api_token"] = $constant->getApiToken();
+        $requestData["environment"] = $constant->getEnvironment();
+        $requestData["checkout_id"] = $constant->getCheckoutId();
+        $requestData["ticket"] = $input->get('ticket');
+        $requestData["action"] = "receipt";
+
+        $preloadUrl = $constant->getPreloadUrl();
+
+        $response        = HttpFactory::getHttp()->post($preloadUrl, json_encode($requestData));
+        $responseMessage = json_decode($response->getBody());
+
+        if ($responseMessage->response->success == "true") {
+
+            $receipt = $responseMessage->response->receipt;
+
+            $data = (object) [
+                'id'                   => $receipt->cc->cust_id,
+                'payment_status'       => "paid",
+                'payment_error_reason' => "",
+                'transaction_id'       => $receipt->cc->order_no,
+            ];
+
+            try {
+                $order->updateOrder($data);
+                $order->onOrderPlacementCompletion();
+                $this->app->redirect($constant->getSuccessURL());
+            } catch (\Throwable $error) {
+                Log::add($error->getMessage(), Log::ERROR, 'moneris.easystore');
+                $this->app->enqueueMessage($error->getMessage(), 'error');
+            }
+        } else {
+            Log::add($responseMessage['response']['error'], Log::ERROR, 'moneris.easystore');
+            $this->app->enqueueMessage($responseMessage['response']['error'], 'error');
+        }
     }
 
 }
