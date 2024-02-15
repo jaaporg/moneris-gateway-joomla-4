@@ -101,23 +101,22 @@ class MonerisPayment extends PaymentGatewayPlugin
         $data["txn_total"] = number_format($paymentData->total_price, 2, $paymentData->decimal_separator, '');
 
         try {
-
             $response = HttpFactory::getHttp()->post($constants->getPreloadUrl(), json_encode($data));
 
-            $responseData = json_decode((string) $response->getBody(), true);
+            $responseData = json_decode($response->getBody());
 
             $ticket = "";
             // If response is true then return the url
-            if ($responseData['response']['success'] == "true") {
+            if ($responseData->response->success == "true") {
 
-                $ticket = $responseData['response']['ticket'];
+                $ticket = $responseData->response->ticket;
 
                 $layoutPath  = JPATH_ROOT . '/plugins/easystore/moneris/src/layouts';
 
                 echo LayoutHelper::render('checkoutJs', ['ticket' => $ticket], $layoutPath);
             } else {
-                Log::add($responseData['response']['error'], Log::ERROR, 'moneris.easystore');
-                $this->app->enqueueMessage($responseData['response']['error'], 'error');
+                Log::add($responseData->response->error->message, Log::ERROR, 'moneris.easystore');
+                $this->app->enqueueMessage($responseData->response->error->message, 'error');
                 $this->app->redirect($paymentData->back_to_checkout_page);
             }
         } catch (\Throwable $error) {
@@ -154,11 +153,11 @@ class MonerisPayment extends PaymentGatewayPlugin
         $preloadUrl = $constant->getPreloadUrl();
 
         $response        = HttpFactory::getHttp()->post($preloadUrl, json_encode($requestData));
-        $responseMessage = json_decode($response->getBody());
+        $responseData = json_decode($response->getBody());
 
-        if ($responseMessage->response->success == "true") {
+        if ($responseData->response->success == "true") {
 
-            $receipt = $responseMessage->response->receipt;
+            $receipt = $responseData->response->receipt;
 
             $data = (object) [
                 'id'                   => $receipt->cc->cust_id,
@@ -174,10 +173,12 @@ class MonerisPayment extends PaymentGatewayPlugin
             } catch (\Throwable $error) {
                 Log::add($error->getMessage(), Log::ERROR, 'moneris.easystore');
                 $this->app->enqueueMessage($error->getMessage(), 'error');
+                $this->app->redirect($paymentNotifyData->back_to_checkout_page);
             }
         } else {
-            Log::add($responseMessage['response']['error'], Log::ERROR, 'moneris.easystore');
-            $this->app->enqueueMessage($responseMessage['response']['error'], 'error');
+            Log::add($responseData->response->error->message, Log::ERROR, 'moneris.easystore');
+            $this->app->enqueueMessage($responseData->response->error->message, 'error');
+            $this->app->redirect($paymentNotifyData->back_to_checkout_page);
         }
     }
 
