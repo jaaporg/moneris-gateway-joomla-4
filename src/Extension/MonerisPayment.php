@@ -4,7 +4,7 @@
  * @package     EasyStore.Site
  * @subpackage  EasyStore.Sample
  *
- * @copyright   Copyright (C) 2023 JoomShaper <https://www.joomshaper.com>. All rights reserved.
+ * @copyright   Copyright (C) 2024 japporg <https://www.japporg.com>. All rights reserved.
  * @license     GNU General Public License version 3; see LICENSE
  */
 
@@ -19,6 +19,8 @@ use JoomShaper\Plugin\EasyStore\Moneris\Utils\MonerisConstants;
 use JoomShaper\Component\EasyStore\Administrator\Plugin\PaymentGatewayPlugin;
 use Joomla\CMS\Http\HttpFactory;
 use Joomla\CMS\Layout\LayoutHelper;
+use JoomShaper\Component\EasyStore\Administrator\Helper\EasyStoreDatabaseOrm;
+use Joomla\CMS\Filesystem\File;
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('_JEXEC') or die;
@@ -53,29 +55,88 @@ class MonerisPayment extends PaymentGatewayPlugin
      */
     public function onPayment(Event $event)
     {
+        $app = Factory::getApplication();
+        $data = $app->input->get('data', '', 'STRING');
+        $user = $app->getIdentity();
+
+        $countriesJsonPath = JPATH_ROOT . '/media/com_easystore/data/countries.json';
+        $countriesList = [];
+        if (File::exists($countriesJsonPath)) {
+            $countriesList = json_decode(file_get_contents($countriesJsonPath));
+        }
+
         // Get the necessary data from `SampleConstants` which are needed to initiate payment process.
         $constants   = new MonerisConstants();
         $eventArguments = $event->getArguments();
-        $productsList   = $eventArguments['subject'] ? $eventArguments['subject'] : [];
         $paymentData   = $eventArguments['subject'] ? $eventArguments['subject'] : [];
 
-        $query['notify_url']    = $constants->getWebHookUrl();
-        $query['return']        = $constants->getSuccessUrl();
-        $query['cancel_return'] = $constants->getCancelUrl($productsList->order_id);
+        $orm = new EasyStoreDatabaseOrm();
+        $order = $orm->get('#__easystore_orders', 'id', $paymentData->order_id)->loadObject();
+        $shippingAddress = (object) json_decode($order->shipping_address);
+        $billingAddress = (object) json_decode($order->billing_address);
+
+        $billingAddressState = '';
+        $billingAddressCountry = '';
+
+        $shippingAddressState = '';
+        $shippingAddressCountry = '';
+        foreach($countriesList as $countries) {
+            if($shippingAddress->country == $countries->numeric_code) {
+                $shippingAddressCountry = $countries->name;
+            }
+
+            if($billingAddress->country == $countries->numeric_code) {
+                $billingAddressCountry = $countries->name;
+            }
+
+            foreach ($countries->states as $states) {
+                if($shippingAddress->state == $states->id) {
+                    $shippingAddressState = $states->name;
+                }
+                if($billingAddress->state == $states->id) {
+                    $billingAddressState = $states->name;
+                }
+            }
+        }
 
         $data = [];
         $data["store_id"] = $constants->getStoreId();
         $data["api_token"] = $constants->getApiToken();
         $data["checkout_id"] = $constants->getCheckoutId();
-        $requestData["environment"] = $constants->getEnvironment();
+        $data["environment"] = $constants->getEnvironment();
         $data["action"] = "preload";
-        $data["token"] = [];
+        // $data["token"] = [];
         $data["ask_cvv"] = "Y";
-        $data["order_no"] = "";
+        $data["order_no"] = (string) uniqid();
         $data["cust_id"] = (string) $paymentData->order_id;
-        $data["dynamic_descriptor"] = "dyndesc";
+        $data["dynamic_descriptor"] = "";
         $data["language"] = "en";
+        
+        $data["contact_details"] = [
+            "first_name" => $user->name,
+            "last_name" => "",
+            "email" => $user->email,
+            "phone" => "",
+        ];
 
+        $data["shipping_details"] = [
+            "address_1" => (string) $shippingAddress->address_1,
+            "address_2" => (string) $shippingAddress->address_2,
+            "city" => $shippingAddress->city,
+            "province" => $shippingAddressState,
+            "country" => $shippingAddressCountry,
+            "postal_code" => $shippingAddress->zip_code
+        ];
+
+        $data["billing_details"] = [
+            "address_1" => (string) $billingAddress->address_1,
+            "address_2" => (string) $billingAddress->address_2,
+            "city" => $billingAddress->city,
+            "province" => $billingAddressState,
+            "country" => $billingAddressCountry,
+            "postal_code" => $billingAddress->zip_code
+        ];
+        
         $txnTotal = 0;
         $items = [];
         if (!empty($paymentData)) {
@@ -101,11 +162,11 @@ class MonerisPayment extends PaymentGatewayPlugin
         $data["txn_total"] = number_format($paymentData->total_price, 2, $paymentData->decimal_separator, '');
 
         try {
+
             $response = HttpFactory::getHttp()->post($constants->getPreloadUrl(), json_encode($data));
 
             $responseData = json_decode($response->getBody());
-
-            $ticket = "";
+            
             // If response is true then return the url
             if ($responseData->response->success == "true") {
 
@@ -115,13 +176,26 @@ class MonerisPayment extends PaymentGatewayPlugin
 
                 echo LayoutHelper::render('checkoutJs', ['ticket' => $ticket], $layoutPath);
             } else {
-                Log::add($responseData->response->error->message, Log::ERROR, 'moneris.easystore');
-                $this->app->enqueueMessage($responseData->response->error->message, 'error');
+                $errors = array_values((array) $responseData->response->error);
+
+                $str = "";
+                foreach($errors as $s => $error) {
+                    if(is_array($error) || is_object($error)) {
+                        foreach ($error as $key => $value) {
+                            $str .= "{$key} {$value}, ";
+                        }
+                    } else {
+                        $str .= "{$s} {$error}, ";
+                    }
+                }
+
+                Log::add($str, Log::ERROR, 'moneris.easystore');
+                $this->app->enqueueMessage($str, 'error');
                 $this->app->redirect($paymentData->back_to_checkout_page);
             }
         } catch (\Throwable $error) {
-            Log::add($error->getMessage(), Log::ERROR, 'moneris.easystore');
-            $this->app->enqueueMessage($error->getMessage(), 'error');
+            Log::add("Invalid data", Log::ERROR, 'moneris.easystore');
+            $this->app->enqueueMessage("Invalid data", 'error');
             $this->app->redirect($paymentData->back_to_checkout_page);
         }
     }
@@ -176,8 +250,10 @@ class MonerisPayment extends PaymentGatewayPlugin
                 $this->app->redirect($paymentNotifyData->back_to_checkout_page);
             }
         } else {
-            Log::add($responseData->response->error->message, Log::ERROR, 'moneris.easystore');
-            $this->app->enqueueMessage($responseData->response->error->message, 'error');
+            $errors = array_values((array) $responseData->response->error);
+
+            Log::add(implode($errors), Log::ERROR, 'moneris.easystore');
+            $this->app->enqueueMessage(implode(' ', $errors), 'error');
             $this->app->redirect($paymentNotifyData->back_to_checkout_page);
         }
     }

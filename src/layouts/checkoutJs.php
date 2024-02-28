@@ -4,7 +4,7 @@
  * @package     EasyStore.Site
  * @subpackage  EasyStore.Paddle
  *
- * @copyright   Copyright (C) 2023 JoomShaper <https://www.joomshaper.com>. All rights reserved.
+ * @copyright   Copyright (C) 2024 japporg <https://www.japporg.com>. All rights reserved.
  * @license     GNU General Public License version 3; see LICENSE
  */
 
@@ -18,7 +18,8 @@ use JoomShaper\Plugin\EasyStore\Moneris\Utils\MonerisConstants;
 
 extract($displayData);
 $constants = new MonerisConstants();
-$url = $constants->getWebHookUrl();
+$completeUrl = $constants->getWebHookUrl();
+$cancelUrl = $constants->getCancelUrl($orderId);
 $environment = $constants->getEnvironment();
 
 $inlineJS = <<<JS
@@ -30,26 +31,32 @@ $inlineJS = <<<JS
         myCheckout.setCheckoutDiv("monerisCheckout");
 
         var myPageLoad = function(data) {
-            console.log("Successfully");
+            console.log("Success");
         };
 
         var myCancelTransaction = function(data) {
             console.log("myCancelTransaction");
             const obj = JSON.parse(data);
-            console.log(obj.ticket);
+            setTimeout(function() {
+                myCheckout.closeCheckout(obj.ticket);
+                window.location.replace("$cancelUrl");
+            }, 1000)
         };
 
         var myErrorEvent = function(data) {
             console.log("myErrorEvent");
             const obj = JSON.parse(data);
-            console.log(obj.ticket);
+            setTimeout(function() {
+                myCheckout.closeCheckout(obj.ticket);
+                window.location.replace("$cancelUrl");
+            }, 1000)
         };
 
         var myPaymentReceipt = function(data) {
             const obj = JSON.parse(data);
             setTimeout(function() {
                 myCheckout.closeCheckout(obj.ticket);
-                window.location.replace("$url&ticket="+obj.ticket);
+                window.location.replace("$completeUrl&ticket="+obj.ticket);
             }, 1000)
         };
 
@@ -58,7 +65,7 @@ $inlineJS = <<<JS
 
             setTimeout(function() {
                 myCheckout.closeCheckout(obj.ticket);
-                window.location.replace("$url&ticket="+obj.ticket);
+                window.location.replace("$completeUrl&ticket="+obj.ticket);
             }, 1000)
         };
 

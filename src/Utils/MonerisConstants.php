@@ -4,7 +4,7 @@
  * @package     EasyStore.Site
  * @subpackage  EasyStore.Moneris
  *
- * @copyright   Copyright (C) 2023 JoomShaper <https://www.joomshaper.com>. All rights reserved.
+ * @copyright   Copyright (C) 2024 japporg <https://www.japporg.com>. All rights reserved.
  * @license     GNU General Public License version 3; see LICENSE
  */
 
@@ -27,8 +27,6 @@ use JoomShaper\Component\EasyStore\Administrator\Plugin\Constants;
  */
 class MonerisConstants extends Constants
 {
-    public $ticket;
-
     /**
      * Plugin parameters
      *
@@ -43,11 +41,10 @@ class MonerisConstants extends Constants
      */
     protected $name = 'moneris';
 
-    public const TEST_PRELOAD_URL = 'https://gatewayt.moneris.com/chktv2/request/request.php';
-    public const LIVE_PRELOAD_URL = 'https://gateway.moneris.com/chktv2/request/request.php';
-
-    public const MONERIS_TEST_JS = 'https://gatewayt.moneris.com/chktv2/js/chkt_v2.00.js';
-    public const MONERIS_LIVE_JS = 'https://gateway.moneris.com/chktv2/js/chkt_v2.00.js';
+    const TEST_PRELOAD_URL = 'https://gatewayt.moneris.com/chktv2/request/request.php';
+    const LIVE_PRELOAD_URL = 'https://gateway.moneris.com/chktv2/request/request.php';
+    const MONERIS_TEST_JS = 'https://gatewayt.moneris.com/chktv2/js/chkt_v2.00.js';
+    const MONERIS_LIVE_JS = 'https://gateway.moneris.com/chktv2/js/chkt_v2.00.js';
 
     /**
      * The constructor method.
@@ -99,15 +96,5 @@ class MonerisConstants extends Constants
     public function getScript()
     {
         return $this->getPaymentEnvironment() === 'test' ? self::MONERIS_TEST_JS : self::MONERIS_LIVE_JS;
-    }
-
-    public function setTicket($ticket)
-    {
-        return $this->ticket = $ticket;
-    }
-
-    public function getTicket()
-    {
-        return $this->ticket;
     }
 }

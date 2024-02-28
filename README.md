@@ -1,1 +1,1 @@
-#moneris-gateway-joomla-4
+#moneris-gateway-joomla
